@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Word Swap</title>
+        <script src="https://unpkg.com/jquery"></script>
+        <script src="https://unpkg.com/jquery-color"></script>
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Roboto&2=swap');
+
+            body {
+                font-family: 'Roboto', sans-serif;
+                text-align: center;
+                color: black;
+                background-color: white;
+            }
+            @media (prefers-color-scheme: dark) {
+                body {
+                    color: white;
+                    background-color: black;
+                }
+            }
+         </style>
+    </head>
+    <body style="min-height: 100%;">
+        <h1>Word Swap</h1>
+        <div id="0" style="display: none;">
+            <p>Word Swap allows you to enter text and swap out the words with synonyms, to make it look totally different.</p>
+            <button id="start">Start</button>
+        </div>
+
+        <div id="1" style="display: none;">
+            <p id="text">Enter the text to swap below.</p>
+            <input type="text"/>
+        </div>
+
+        <div id="2" style="display: none;">
+            <h3 id="display"></h3>
+            <button id="continue" disabled="disabled">Continue</button>
+        </div>
+
+        <h3 id="3" style="display: none;"></h3>
+        <script>
+            function $$(selectors) {
+                return document.querySelector(selectors);
+            }
+            function delay(ms) {
+                return new Promise(resolve => setTimeout(resolve, ms));
+            }
+            function last(array) {
+                return array[array.length - 1];
+            }
+            function l(...data) {
+                return console.log(...data);
+            }
+            function re(str, removeValues) {
+                if (!Array.isArray(removeValues)) {throw new TypeError("removeValues must be an array!");}
+                if (typeof str !== "string") {throw new TypeError("str must be a string!");}
+                removeValues.forEach((i) => {
+                    str = str.replace(i, "");
+                });
+                return str;
+            }
+            function ra(array) {
+                if (!Array.isArray(array)) {throw new TypeError("removeValues must be an array!");}
+
+                return array[Math.floor(Math.random() * array.length)];
+            }
+            async function getSynonym(word) {
+                const resp = await fetch("https://api.dictionaryapi.dev/api/v2/entries/en/" + word);
+                if (!resp.ok) {return word}
+                const json = await resp.json();
+
+                const synonyms = [word];
+                json.forEach((i0) => {
+                    i0.meanings.forEach((i1) => {
+                        i1.definitions.forEach((i2) => {
+                            i2.synonyms.forEach((i3) => {if (!synonyms.includes(i3)) {synonyms.push(i3)}});
+                        });
+                    });
+                });
+                return ra(synonyms);
+            }
+
+            $("#0").show(250);
+
+            $("#start").focus();
+
+            $("#start").click(async () => {
+                $("#0").hide(250);
+                $("#1").show(250);
+
+                await delay(250);
+                $("input").focus();
+
+                $("input")[0].addEventListener("input", async (i) => {
+                    if ($("input").val() === "") {
+                        $("#2").hide(250);
+                        $("#continue").attr("disabled", "disabled");
+                        await delay(250);
+                    } else {
+                        $("#2").show(250);
+                        $("#continue").removeAttr("disabled");
+                    }
+                    $("#display").text($("input").val());
+                });
+
+                $("input").keydown((e) => {
+                    if (e.key === "Enter") {$("#continue").click();}
+                });
+            });
+
+            $("#continue").click(async () => {
+                $("#continue").attr("disabled", "disabled");
+                $("#1, #2").hide(250);
+                $("#3").show(250);
+                
+                window.textToSwap = [""]
+                if (typeof $("input").val() === "string") {textToSwap = $("input").val().split(" ");} else {alert("oh no");}
+
+                textToSwap.forEach((t, i) => {
+                    $("#3")[0].innerHTML += `<span class="${i}">${t}</span> `;
+                });
+
+                $("#3").children().css("color", "#303080");
+
+                textToSwap.forEach(async (w, i) => {
+                    $("." + i).animate({color: "#2060FF"}, 250);
+                    w = re(w, [",", ".", "!", "\"", "?", ";", ":", "/", "\\"]);
+
+                    w = await getSynonym(w);
+
+                    async function callback(e) {
+                        const el = $(e.target);
+                        el.off("click");
+                        el.animate({color: "#2060FF"}, 250);
+                        let w = textToSwap[el[0].className];
+                        w = re(w, [",", ".", "!", "\"", "?", ";", ":", "/", "\\"]);
+
+                        w = await getSynonym(w);
+                        $("." + i).text(w).animate({color: "#18C231"}).click(callback);
+
+                    }
+
+                    $("." + i).text(w).animate({color: "#18C231"}).click(callback);
+                });
+            });
+        </script>
+    </body>
+</html>
